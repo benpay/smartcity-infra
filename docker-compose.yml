@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: smartcity
+      POSTGRES_PASSWORD: smartcity123
+      POSTGRES_DB: smartcity
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartcity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./smartcity-backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: development  
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: smartcity
+      DB_PASSWORD: smartcity123
+      DB_NAME: smartcity
+      JWT_SECRET: change_this_secret_in_production
+      JWT_EXPIRES_IN: 7d
+      COOKIE_NAME: auth_token
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./smartcity-frontend
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
